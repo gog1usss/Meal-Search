@@ -11,59 +11,68 @@ from PyQt6.QtGui import QPixmap
 class RestaurantApp(QWidget):
     def __init__(self):
         super().__init__()
+
         self.setWindowTitle('Рестораны и Бронирование')
-        self.resize(1200, 800)
+        self.resize(1300, 900)
         self.setStyleSheet("""
             QWidget {
-                background-color: #1e1e2f;
-                color: #f8f8f2;
-                font-family: Segoe UI Black, sans-serif;
+                background-color: #262626;
+                color: #EDEDED;
+                font-family: 'Segoe UI Black', sans-serif;
                 font-size: 14px;
             }
 
             QLabel {
-                font-weight: bold;
+                font-weight: 600;
                 margin-top: 10px;
                 margin-bottom: 5px;
+                font-size: 15px;
             }
 
             QPushButton {
-                background-color: #6272a4;
+                background-color: #3d3d3d;
                 color: white;
-                border: none;
-                padding: 12px 14px;
-                border-radius: 6px;
+                padding: 10px 14px;
+                border-radius: 10px;
                 font-weight: bold;
+                transition: background-color 0.3s ease;
+                
+                
             }
 
             QPushButton:hover {
-                background-color: #7082c1;
+                background-color: #464646;
             }
 
             QLineEdit, QSpinBox, QDateTimeEdit {
-                background-color: #2b2b3d;
-                border: 1px solid #44475a;
-                border-radius: 6px;
-                padding: 6px;
+                background-color: #3d3d3d;
+                border: 1px solid #3d3d3d;
+                border-radius: 8px;
+                padding: 8px;
                 color: white;
             }
 
             QListWidget, QTableWidget {
-                background-color: #2b2b3d;
-                border: 1px solid #44475a;
-                border-radius: 6px;
+                background-color: #3d3d3d;
+                border: 1px solid #3d3d3d;
+                border-radius: 10px;
             }
 
             QHeaderView::section {
-                background-color: #44475a;
-                color: #f8f8f2;
-                padding: 4px;
+                background-color: #3d3d3d;
+                color: white;
+                padding: 6px;
                 border: none;
+                font-weight: bold;
             }
 
             QListWidget::item:selected, QTableWidget::item:selected {
-                background-color: #44475a;
+                background-color: #cccc;
                 color: white;
+            }
+
+            QTableWidget {
+                gridline-color: #555;
             }
         """)
 
@@ -80,22 +89,28 @@ class RestaurantApp(QWidget):
         self.left_layout = QVBoxLayout()
         self.right_layout = QVBoxLayout()
 
+
         self.left_layout.setContentsMargins(10, 10, 10, 10)
         self.left_layout.setSpacing(10)
-        self.right_layout.setContentsMargins(10, 10, 10, 10)
+        self.right_layout.setContentsMargins(10, -5, 10, 10)
         self.right_layout.setSpacing(10)
 
         self.restaurant_list = QListWidget()
+        self.restaurant_list.setStyleSheet("""
+            QListWidget {
+                font-size: 16pt;
+            }
+        """)
         self.restaurant_list.itemClicked.connect(self.show_menu)
 
         self.photo_label = QLabel('Фото ресторана')
-        self.photo_label.setFixedHeight(200)
+        self.photo_label.setScaledContents(True)
         self.photo_label.setMaximumWidth(400)
         self.photo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.photo_label.setStyleSheet('''
             QLabel {
-                border: 3px solid #44475a;
-                background-color: #1e1e2f;
+                border: 3px solid #3d3d3d;
+                background-color: #3d3d3d;
                 border-radius: 10px;
                 color: #888;
             }
@@ -103,10 +118,12 @@ class RestaurantApp(QWidget):
 
         self.menu_table = QTableWidget()
         self.menu_table.setColumnCount(3)
+        self.menu_table.verticalHeader().setVisible(False)
         self.menu_table.setHorizontalHeaderLabels(['Блюдо', 'Цена (₴)', 'Масса (г.)'])
         self.menu_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.menu_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.menu_table.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
+
 
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText('Ваше имя')
@@ -124,6 +141,9 @@ class RestaurantApp(QWidget):
         self.reserve_button = QPushButton('Забронировать и Заказать')
         self.reserve_button.clicked.connect(self.make_reservation)
 
+        self.view_all_button = QPushButton('📖 Посмотреть все записи')
+        self.view_all_button.clicked.connect(self.show_all_reservations)
+
         self.left_layout.addWidget(QLabel('📍 Рестораны:'))
         self.left_layout.addWidget(self.restaurant_list)
 
@@ -138,12 +158,14 @@ class RestaurantApp(QWidget):
         self.right_layout.addWidget(QLabel('Количество человек:'))
         self.right_layout.addWidget(self.people_input)
         self.right_layout.addWidget(self.reserve_button)
+        self.right_layout.addWidget(self.view_all_button)
 
         self.layout.addLayout(self.left_layout, 3)
         self.layout.addLayout(self.right_layout, 5)
         self.setLayout(self.layout)
 
         self.selected_rest_id = None
+        self.all_reservations_window = None
         self.load_restaurants()
 
     def load_restaurants(self):
@@ -155,6 +177,14 @@ class RestaurantApp(QWidget):
             for rest in restaurants:
                 self.restaurant_list.addItem(f"{rest['id']}: {rest['rest_name']}")
 
+    def show_all_reservations(self):
+        if self.all_reservations_window is None or not self.all_reservations_window.isVisible():
+            self.all_reservations_window = AllReservationsWindow(self.connection)
+            self.all_reservations_window.show()
+        else:
+            self.all_reservations_window.raise_()
+            self.all_reservations_window.activateWindow()
+
     def show_menu(self, item):
         text = item.text()
         self.selected_rest_id = int(text.split(':')[0])
@@ -163,7 +193,8 @@ class RestaurantApp(QWidget):
         if restaurant and restaurant['photo']:
             pixmap = QPixmap(restaurant['photo'])
             if not pixmap.isNull():
-                self.photo_label.setPixmap(pixmap.scaled(self.photo_label.width(), self.photo_label.height(), Qt.AspectRatioMode.KeepAspectRatio))
+                self.photo_label.setPixmap(pixmap)
+                self.photo_label.adjustSize()  # Подгоняет QLabel под изображение
             else:
                 self.photo_label.setText('Нет фото')
         else:
@@ -230,6 +261,77 @@ class RestaurantApp(QWidget):
 
         except Exception as e:
             QMessageBox.critical(self, 'Ошибка', f'Ошибка базы данных:\n{str(e)}')
+
+
+
+class AllReservationsWindow(QWidget):
+    def __init__(self, connection):
+        super().__init__()
+        self.setWindowTitle("Все бронирования и заказы")
+        self.resize(1000, 600)
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #262626;
+                color: #EDEDED;
+                font-family: 'Segoe UI', sans-serif;
+                font-size: 13px;
+            }
+            QTableWidget {
+                background-color: #3d3d3d;
+                border: 1px solid #3d3d3d;
+                border-radius: 10px;
+            }
+            QHeaderView::section {
+                background-color: #3d3d3d;
+                color: white;
+                font-weight: bold;
+                padding: 6px;
+            }
+            QTableWidget::item:selected {
+                background-color: #3d3d3d;
+            }
+        """)
+
+        self.connection = connection
+        self.layout = QVBoxLayout(self)
+        self.table = QTableWidget()
+        self.table.setColumnCount(6)
+        self.table.verticalHeader().setVisible(False)
+
+        self.table.setHorizontalHeaderLabels([
+            'Имя', 'Телефон', 'Дата/время', 'Ресторан', 'Блюдо', 'Цена (₴)'
+        ])
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.layout.addWidget(self.table)
+
+        self.load_data()
+
+    def load_data(self):
+        with self.connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT
+                    r.person_name,
+                    r.person_phone,
+                    r.time,
+                    res.rest_name,
+                    m.meal_name,
+                    o.price
+                FROM orders o
+                JOIN reserv r ON o.id_table = r.table_id
+                JOIN restaurant res ON o.id_rest = res.id
+                JOIN menu m ON o.id_meal = m.meal_id
+                ORDER BY r.time DESC
+            """)
+            rows = cursor.fetchall()
+
+            self.table.setRowCount(len(rows))
+            for row_idx, row in enumerate(rows):
+                self.table.setItem(row_idx, 0, QTableWidgetItem(row['person_name']))
+                self.table.setItem(row_idx, 1, QTableWidgetItem(row['person_phone']))
+                self.table.setItem(row_idx, 2, QTableWidgetItem(str(row['time'])))
+                self.table.setItem(row_idx, 3, QTableWidgetItem(row['rest_name']))
+                self.table.setItem(row_idx, 4, QTableWidgetItem(row['meal_name']))
+                self.table.setItem(row_idx, 5, QTableWidgetItem(f"{row['price']:.2f}"))
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
